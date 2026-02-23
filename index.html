@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>検閲の鉄人</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        #root { height: 100dvh; width: 100vw; overflow: hidden; background-color: #0f172a; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+        * { -webkit-tap-highlight-color: transparent; }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+        .digital-font { font-family: 'Courier New', Courier, monospace; font-variant-numeric: tabular-nums; }
+        @media (max-height: 500px) { .hide-on-short { display: none; } .shrink-text { font-size: 1rem !important; line-height: 1.2 !important; } }
+        .log-panel-transition { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const SUBMISSIONS = [
+            // --- 安全：業務連絡 ---
+            { id: 1, type: "社内メール", text: "本日の定例会議の議事録を共有いたします。ご確認のほどよろしくお願いいたします。", isSafe: true, term: "正常", desc: "適切なビジネスメールです。" },
+            { id: 2, type: "日報", text: "本日は新規クライアントとの打ち合わせを実施しました。概ね好感触です。", isSafe: true, term: "正常", desc: "適切な業務報告です。" },
+            { id: 3, type: "広報ブログ", text: "新サービスがリリースされました。生活をより豊かにする機能が満載です。", isSafe: true, term: "正常", desc: "適切な広報文章です。" },
+            { id: 4, type: "システム通知", text: "明日の深夜2時から4時にかけて、サーバーのメンテナンスを実施いたします。", isSafe: true, term: "正常", desc: "適切な告知です。" },
+            { id: 5, type: "チャット", text: "お疲れ様です。明日の懇親会の出欠ですが、私は参加でお願いいたします。", isSafe: true, term: "正常", desc: "適切な社内連絡です。" },
+            { id: 6, type: "経費精算", text: "先月の交通費および立替経費の精算書を提出いたします。ご確認をお願いします。", isSafe: true, term: "正常", desc: "適切な経費精算の連絡です。" },
+            { id: 7, type: "勤怠連絡", text: "おはようございます。本日は体調不良のため、お休みをいただきます。", isSafe: true, term: "正常", desc: "適切な勤怠連絡です。" },
+            { id: 8, type: "チャット", text: "来週のシフト表を作成し、共有フォルダに格納しました。", isSafe: true, term: "正常", desc: "適切な業務連絡です。" },
+            { id: 9, type: "社内メール", text: "お疲れ様です。来期の目標設定シートを添付いたしましたのでご査収ください。", isSafe: true, term: "正常", desc: "適切な社内提出物です。" },
+            { id: 10, type: "顧客対応", text: "お問い合わせいただいた件について、現在担当部署にて事実確認を行っております。", isSafe: true, term: "正常", desc: "適切な顧客対応です。" },
+            { id: 11, type: "会議案内", text: "次回の定例会議は、オンラインではなく第3会議室にて対面で行います。", isSafe: true, term: "正常", desc: "適切な会議案内です。" },
+            { id: 12, type: "チャット", text: "アグリーです。ASAPでアジェンダをフィックスしましょう。", isSafe: true, term: "正常", desc: "意識が高いだけの無害な通信です。" },
+            { id: 13, type: "チャット", text: "承知いたしました。よろしくお願いします！", isSafe: true, term: "正常", desc: "最も安全な返答です。" },
+            { id: 14, type: "社内メール", text: "添付資料のパスワードを忘れてしまったので、再発行をお願いします。", isSafe: true, term: "正常", desc: "日常的なトラブル報告です。" },
+            { id: 15, type: "チャット", text: "お疲れ様です。お先に失礼します！", isSafe: true, term: "正常", desc: "適切な挨拶です。" },
+            { id: 16, type: "社内周知", text: "夏季休暇のお知らせを掲示板に掲載しました。", isSafe: true, term: "正常", desc: "適切な周知です。" },
+
+            // --- 安全：ダミー ---
+            { id: 17, type: "商品企画", text: "新開発の飲料には、9種類の必須アミノ酸がバランス良く配合されています。", isSafe: true, term: "正常（偽装）", desc: "「必須アモト酸」のひっかけ。栄養学の正しい専門用語です。" },
+            { id: 18, type: "チャット", text: "今日の発明も無事に完成していたナリ！ワガハイの刀も冴え渡っているナリよ。", isSafe: true, term: "正常（ナリ）", desc: "「刀」「発明」の単語からコロ助であると断定できます。" },
+            { id: 19, type: "日程調整", text: "次回の会議は、8月10日の11時45分からでいかがでしょうか。", isSafe: true, term: "正常（偽装）", desc: "「810」「1145」のひっかけ。ただの日時指定です。" },
+            { id: 20, type: "チャット", text: "那須さんの資料、ありがとうございます！助かりました。", isSafe: true, term: "正常（偽装）", desc: "名字の「那須」さんへの言及です。" },
+            { id: 21, type: "認証コード", text: "確認コード：114515", isSafe: true, term: "正常（偽装）", desc: "「114514」のひっかけ。ただの乱数です。" },
+            { id: 22, type: "ユーザーID", text: "guest_811_user", isSafe: true, term: "正常（偽装）", desc: "「810」のひっかけです。" },
+            { id: 23, type: "予算申請", text: "予備費として、19,190円を計上します。", isSafe: true, term: "正常（偽装）", desc: "「1919」のひっかけ。正常な経理処理です。" },
+            { id: 24, type: "社内連絡", text: "那須塩原支店への出張報告書を共有します。地元の特産品が好評でした。", isSafe: true, term: "正常（偽装）", desc: "地名の「那須」への言及です。" },
+            { id: 25, type: "アンケート", text: "にゃーぴーというキャラクターが可愛かったです。", isSafe: true, term: "正常（偽装）", desc: "ただの感想です。" },
+            { id: 26, type: "チャット", text: "これ、もう分かりましたね。解決して良かったです。", isSafe: true, term: "正常（偽装）", desc: "「はっきりわかんだね」のひっかけ。正常な報告です。" },
+            { id: 27, type: "チャット", text: "今回の不具合、なんだかんだありましたが、修正を完了しました。", isSafe: true, term: "正常（偽装）", desc: "正常な業務報告です。" },
+            { id: 28, type: "チャット", text: "劇団四季の『美女と野獣』のチケットが取れたのですが、行きますか？", isSafe: true, term: "正常（偽装）", desc: "「野獣」のひっかけ。世界的名作への言及です。" },
+            { id: 29, type: "イベント報告", text: "残念ながら来場者3名という結果に終わりました。", isSafe: true, term: "正常（偽装）", desc: "事実の報告。「オフ会0人」のひっかけ。" },
+            { id: 30, type: "レビュー", text: "この商品は使いやすいですね。はっきりわかりますね。", isSafe: true, term: "正常（偽装）", desc: "適切なレビューです。" },
+            { id: 31, type: "チャット", text: "拓也さんの提案、非常に説得力がありました。採用を検討します。", isSafe: true, term: "正常（偽装）", desc: "名字の「拓也」さんへの言及です。" },
+            { id: 32, type: "日報", text: "土方さんの作成した図面を確認しました。非常に緻密で助かります。", isSafe: true, term: "正常（偽装）", desc: "名字の「土方」さんへの言及です。" },
+            { id: 33, type: "チャット", text: "新製品の予約が完売しました！あぁ^～心がぴょんぴょんするんじゃぁ^～", isSafe: true, term: "正常（ごちうさ）", desc: "有名なアニメのミームです。性的ではないため安全です。" },
+            { id: 34, type: "チャット", text: "なにっ！？予定していた機材が届いていないのですか？至急確認します。", isSafe: true, term: "正常（驚き）", desc: "ただ驚いているだけです。" },
+            { id: 35, type: "日報", text: "本日の進捗は11%です。45分後に再度報告します。", isSafe: true, term: "正常（数値）", desc: "ただの数値報告です。" },
+            { id: 36, type: "チャット", text: "今の冗談、面白すぎて笑いました。", isSafe: true, term: "正常", desc: "普通の笑いです。" },
+            { id: 37, type: "社内連絡", text: "〒810-0001 福岡県福岡市中央区天神に書類を送付しました。", isSafe: true, term: "正常（偽装）", desc: "実在する郵便番号です。" },
+            { id: 38, type: "チャット", text: "一般男性が開発に関わっているという噂です。", isSafe: true, term: "正常", desc: "ごく普通に使われる言い回しです。" },
+            { id: 39, type: "チャット", text: "次の飲み会・・・蟹を食べたいね", isSafe: true, term: "正常（偽装）", desc: "単なる食事の希望です。" },
+            { id: 40, type: "広報ブログ", text: "ほろ苦い甘さが際立つ、星型のクッキー。贅沢な味わい。", isSafe: true, term: "正常（偽装）", desc: "適切な商品説明です。" },
+            { id: 41, type: "社内メール", text: "次回の社内演劇部の演目は「真夏の夜の夢」に決定しました。", isSafe: true, term: "正常（偽装）", desc: "シェイクスピアの名作戯曲です。" },
+            { id: 42, type: "広報ブログ", text: "キャッチコピー『白熱した争いは、既に誰も止められないフェーズへと移行する。』", isSafe: true, term: "正常（偽装）", desc: "ただのイベントの煽り文句です。" },
+            { id: 43, type: "チャット", text: "デデン！ここで問題です！", isSafe: true, term: "正常（偽装）", desc: "クイズ番組などで使われる効果音の表現です。" },
+
+            // --- 有害通信：地雷 ---
+            { id: 44, type: "チャット", text: "おっ開いてんじゃ〜ん。この会議室、空いてるなら使いましょうよ。", isSafe: false, term: "おっ開いてんじゃ〜ん", desc: "出典：淫夢。不適切な定型句です。" },
+            { id: 45, type: "チャット", text: "明日のプレゼン、見とけよ見とけよ〜。絶対に成功させますから。", isSafe: false, term: "見とけよ見とけよ〜", desc: "出典：淫夢。不適切な煽りミーム。" },
+            { id: 46, type: "広報ブログ", text: "このサプリメントには、必須アモト酸が豊富に含まれています。", isSafe: false, term: "必須アモト酸", desc: "出典：創価学会ビデオMAD。宗教的リスク。" },
+            { id: 47, type: "チャット", text: "俺は宗教なんかに興味ねーんだよ。休日は家で寝ていたい派なんで。", isSafe: false, term: "宗教なんかに興味ねーんだよ", desc: "特定の宗教を揶揄する不適切な表現。" },
+            { id: 48, type: "チャット", text: "これなら、土日もバリバリ営業活動できるじゃない！", isSafe: false, term: "活動できるじゃない！", desc: "出典：創価学会ビデオ。不適切な勧誘ミーム。" },
+            { id: 49, type: "チャット", text: "マネモブの意見は無視して、プロジェクトを進めましょう。", isSafe: false, term: "マネモブ", desc: "出典：タフ。読者やモブを指す蔑称。" },
+            { id: 50, type: "社内メール", text: "貴様ーっ当社の新製品を愚弄する気かぁっ！", isSafe: false, term: "愚弄する気かぁっ", desc: "出典：タフ。異常な怒りのミーム。" },
+            { id: 51, type: "チャット", text: "少し厳しい指摘になりますが、忌憚の無い意見ってやつっス。", isSafe: false, term: "忌憚の無い意見ってやつっス", desc: "出典：タフ。界隈特有の定型句。" },
+            { id: 52, type: "障害報告", text: "データが全損しています……ウ……ウソやろ、こ… こんなことが許されていいのか", isSafe: false, term: "こ… こんなことが許されていいのか", desc: "出典：タフ。絶望の構文引用。" },
+            { id: 53, type: "チャット", text: "一旦ジムにでも行って一汗流したいな。やらないか？", isSafe: false, term: "やらないか", desc: "出典：くそみそ。伝説的なセクハラ勧誘。" },
+            { id: 54, type: "チャット", text: "俺は一体なんのために戦っているんDAAAAA!!!!", isSafe: false, term: "DAAAAA!!!!", desc: "出典：ゼERO。卑猥なソースを持つ公序良俗違反。" },
+            { id: 55, type: "謝罪・懇願", text: "すいません、許してください！なんでもしますから！", isSafe: false, term: "なんでもしますから！", desc: "出典：淫夢。極めて不適切な性的ミーム。" },
+            { id: 56, type: "チャット", text: "先ほどのプレゼン、見事でした。やりますねぇ！次回も期待しています。", isSafe: false, term: "やりますねぇ！", desc: "出典：淫夢。称賛を装ったミーム。" },
+            { id: 57, type: "日程調整", text: "明日の打ち合わせですが、14時でいいよ、来いよ。", isSafe: false, term: "いいよ、来いよ", desc: "出典：淫夢。不適切な時間指定偽装。" },
+            { id: 58, type: "来客対応", text: "那須さん？今お店に来客があり、指名が入っています。至急来れますか？", isSafe: false, term: "指名が入っています。至急来れますか？", desc: "出典：拓也。風俗店を装った悪質な偽装。" },
+            { id: 59, type: "チャット", text: "今回のトラブル、もう許せるぞオイ！二度と繰り返すなよ！", isSafe: false, term: "もう許せるぞオイ！", desc: "出典：淫夢。職場環境を乱すミーム。" },
+            { id: 60, type: "チャット", text: "案件獲得、ありがとナス！", isSafe: false, term: "ありがとナス！", desc: "出典：淫夢。有名な汚染語彙。" },
+            { id: 61, type: "広報", text: "弊社にはIT系ボディビルダーの社員が数名在籍しております。", isSafe: false, term: "〇〇系ボディビルダー", desc: "出典：淫夢。特定界隈への所属を示す隠語。" },
+            { id: 62, type: "チャット", text: "コンペ通過しました。やったぜ。", isSafe: false, term: "やったぜ。", desc: "出典：淫夢。喜びを表現する定番ミーム。" },
+            { id: 63, type: "チャット", text: "プロジェクトの進捗、ためて待つぜ。最高の成果を期待しているぜ。", isSafe: false, term: "ためて待つぜ。", desc: "出典：変態糞土方。スカトロジー文脈の隠語。" },
+            { id: 64, type: "チャット", text: "ああ～～早く仕事まみれになろうぜ。忙しいのはいいことだ。", isSafe: false, term: "〇〇まみれになろうぜ", desc: "出典：変態糞土方。不自然な「まみれ」強調。" },
+            { id: 65, type: "チャット", text: "出口を求めて会議室の中でぐるぐるしている。迷路みたいなオフィスだ。", isSafe: false, term: "ぐるぐるしている", desc: "出典：変態糞土方。便意を示す隠語。" },
+            { id: 66, type: "社内メール", text: "当組織は恒心教育を理念に掲げ、常に心を高める活動を行っております。", isSafe: false, term: "恒心教", desc: "出典：恒心教。カルト的なミーム。" },
+            { id: 67, type: "チャット", text: "あの新人、チンフェみたいな顔してて面白くないですか？", isSafe: false, term: "チンフェ", desc: "出典：恒心教。深刻な中傷ミーム。" },
+            { id: 68, type: "チャット", text: "ﾌﾞﾘﾌﾞﾘﾌﾞﾘﾌﾞﾘｭリュリュリュリュリュリュ！！！！！！", isSafe: false, term: "ﾌﾞﾘﾌﾞﾘﾌﾞﾘﾌﾞﾘｭ", desc: "品位を汚染する最悪のスパム。" },
+            { id: 69, type: "報告書", text: "この件に関しては、王道を征く手法でアプローチすべきかと存じます。", isSafe: false, term: "王道を征く", desc: "出典：成人向けビデオ作品インタビュー。" },
+            { id: 70, type: "チャット", text: "ファッ！？その仕様、いつ追加されたんですか？", isSafe: false, term: "ファッ！？", desc: "出典：淫夢。驚愕の叫び。" },
+            { id: 71, type: "指示出し", text: "こちらの申請書に必要事項を記入して、どうぞ。", isSafe: false, term: "して、どうぞ", desc: "出典：淫夢。不適切な催促ミーム。" },
+            { id: 72, type: "イベント報告", text: "残念ながら、オフ会0人という結果に終わりました。", isSafe: false, term: "オフ会0人", desc: "出典：syamu。失敗を揶揄する表現。" },
+            { id: 73, type: "チャット", text: "やったねたえちゃん！明日は休みだよ！", isSafe: false, term: "やったねたえちゃん！", desc: "極めて不適切な出典を持つミーム。" },
+            { id: 74, type: "チャット", text: "お ま た せ。会議室の準備が完了しました。", isSafe: false, term: "お ま た せ", desc: "出典：淫夢。不自然な空白はミーム使用合図。" },
+            { id: 75, type: "日報", text: "連日の残業で、もう頭がパーンってなりましたよ。", isSafe: false, term: "頭がパーン", desc: "出典：創価。最凶の地雷ミーム。" },
+            { id: 76, type: "チャット", text: "最近だらしねぇな。もっと仕事に集中しろ！", isSafe: false, term: "最近だらしねぇな", desc: "出典：レスリング。性的不適切表現。" },
+            { id: 77, type: "チャット", text: "部長、さっきから何を四天王！？", isSafe: false, term: "何を四天王!?", desc: "出典：ヒカマニ。揶揄ミーム。" },
+            { id: 78, type: "チャット", text: "今のプレゼン、完璧すぎて笑、ゥ", isSafe: false, term: "笑、ゥ", desc: "出典：ヒカマニ。所属を示す隠語です。" },
+            { id: 79, type: "チャット", text: "ウホッ、いい男……。彼なら安心して仕事を任せられますね。", isSafe: false, term: "ウホッ、いい男……", desc: "出典：くそみそ。性的アプローチの隠語。" },
+            { id: 80, type: "チャット", text: "さすが、兄貴！歪みねぇ仕事っぷりでしたね！", isSafe: false, term: "歪みねぇ", desc: "出典：レスリング。称賛を装う性的ミーム。" },
+            { id: 81, type: "認証コード", text: "確認コード：114514", isSafe: false, term: "114514", desc: "淫夢の象徴数値。" },
+            { id: 82, type: "ユーザー名", text: "Seikin_Mania_Official", isSafe: false, term: "〇〇_Mania", desc: "ヒカマニ界隈の命名規則。" },
+            { id: 83, type: "チャット", text: "異常性愛者の巣窟かよ、この掲示板は。", isSafe: false, term: "異常性愛者", desc: "出典：タフ。深刻な差別表現。" },
+            { id: 84, type: "スローガン", text: "自分たちの手で作るから尊いんだ 絆が深まるんだ", isSafe: false, term: "尊いんだ絆が深まるんだ", desc: "出典：タフ。界隈の合言葉。" },
+            { id: 85, type: "レビュー", text: "この新商品、口の中に広がりがあってOCです。", isSafe: false, term: "OC（たれぞう）", desc: "出典：たれぞう。空耳ミーム。" },
+            { id: 86, type: "チャット", text: "おっ、そうだな。その方針でいきましょう。", isSafe: false, term: "おっ、そうだな", desc: "出典：淫夢。投げやりな相槌。" },
+            { id: 87, type: "チャット", text: "あ、ふーん（察し）。了解しました。", isSafe: false, term: "あっ、ふーん（察し）", desc: "出典：淫夢。相手を小馬鹿にした句。" },
+            { id: 88, type: "チャット", text: "これもうわかんねぇな。開発中止にしませんか？", isSafe: false, term: "これもうわかんねぇな", desc: "出典：淫夢。思考停止の叫び。" },
+            { id: 89, type: "日報", text: "今日は迫真のプレゼンができたと思います。", isSafe: false, term: "迫真", desc: "出典：淫夢。界隈で多用される形容詞。" },
+            { id: 90, type: "チャット", text: "もういいよ、休め。壊れちゃ〜う。", isSafe: false, term: "壊れちゃ〜う", desc: "出典：淫夢。性的快楽ソースのミーム。" },
+            { id: 91, type: "自己紹介", text: "ウッス！よろしくお願いしまーす。", isSafe: false, term: "ウッス（拓也）", desc: "出典：拓也。怪文書の導入。" },
+            { id: 92, type: "チャット", text: "期限に間に合わない？悔い改めて。", isSafe: false, term: "悔い改めて", desc: "出典：淫夢。不適切な煽り。" },
+            { id: 93, type: "チャット", text: "そんなことして、大丈夫か？まずいですよ！", isSafe: false, term: "まずいですよ！", desc: "出典：淫夢。不穏な焦燥ミーム。" },
+            { id: 94, type: "チャット", text: "明日の資料配布は、こ↑こ↓にお願いします。", isSafe: false, term: "こ↑こ↓", desc: "出典：淫夢。不自然な記号指定。" },
+            { id: 95, type: "チャット", text: "今日の懇親会、参加人数は33-4名になる見込みです。", isSafe: false, term: "33-4", desc: "なんJ。敗北スコアの揶揄。" },
+            { id: 96, type: "チャット", text: "いいよ、来いよ。11時45分にお待ちしています。", isSafe: false, term: "114514（隠語）", desc: "淫夢。悪質なミーム誘導。" },
+            { id: 97, type: "チャット", text: "部長、やりますね。はっきりわかんだね。", isSafe: false, term: "はっきりわかんだね", desc: "出典：淫夢。確信を得た際の不適切な句。" },
+            { id: 98, type: "チャット", text: "案件成功おめでとう！そうだよ（便乗）", isSafe: false, term: "（便乗）", desc: "出典：淫夢。嘲笑的同意。" },
+            { id: 99, type: "チャット", text: "明日のアップデート、で、出ますよ。", isSafe: false, term: "で、出ますよ", desc: "出典：淫夢。悪質な汚染行為。" },
+            { id: 100, type: "チャット", text: "次の飲み会・・・蟹になりたいね", isSafe: false, term: "蟹になりたいね", desc: "出典：レスリング。有名な空耳ミーム。" },
+            { id: 101, type: "レビュー", text: "生地がしっとりとしていて、それでいてベタつかない、スッキリした甘さ。", isSafe: false, term: "しっとりブラウニー", desc: "出典：クッキー☆。有名な定型構文。" },
+            { id: 102, type: "チャット", text: "この案件、まさに「真夏の夜の淫夢」ですね。", isSafe: false, term: "真夏の夜の淫夢", desc: "一発アウトのコンプラ違反。" },
+            { id: 103, type: "チャット", text: "過熱した欲望は、ついに危険な領域へと突入する。", isSafe: false, term: "危険な領域へ", desc: "淫夢。緊迫感を装った悪質ミーム。" },
+            { id: 104, type: "チャット", text: "デデドン！サーバーがダウンしました！", isSafe: false, term: "デデドン！", desc: "出典：淫夢。特定界隈の効果音ミーム。" },
+            { id: 105, type: "商品企画", text: "主力商品としてはゴキブリホイホイ、チャーハンの素があります。", isSafe: false, term: "ホイホイチャーハン", desc: "出典：レスリング。巧妙な汚染。" },
+            { id: 106, type: "商品企画", text: "新商品の名称として『最強とんがりコーン』はいかがでしょうか。", isSafe: false, term: "最強とんがりコーン", desc: "出典：レスリング。空耳由来の違反。" }
+        ];
+
+// 厳選された新人モード用ID（33問固定）
+        const ROOKIE_IDS = [
+            1, 2, 3, 4, 5, 7, 8, 10, 13, 15,
+            20, 21, 27, 28,
+            44, 45, 55, 56, 57, 60, 62, 64, 70, 79, 80, 81, 86, 87, 93, 94, 96, 104
+        ];
+                const shuffleArray = (array) => {
+            const newArray = [...array];
+            for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+            }
+            return newArray;
+        };
+
+        function App() {
+            const [unlockedVeteran, setUnlockedVeteran] = useState(() => localStorage.getItem('unlockedVeteran') === 'true');
+            const [gameMode, setGameMode] = useState('rookie');
+            const [correctCount, setCorrectCount] = useState(0);
+            const [gameState, setGameState] = useState('title');
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [score, setScore] = useState(0);
+            const [shuffledQuestions, setShuffledQuestions] = useState([]);
+            const [timeLeftMs, setTimeLeftMs] = useState(60000);
+            const [resultType, setResultType] = useState('failed');
+            const [history, setHistory] = useState([]);
+            const [isPaused, setIsPaused] = useState(false);
+            const [selectedLog, setSelectedLog] = useState(null);
+            const [showMobileLog, setShowMobileLog] = useState(false);
+            const [failedItem, setFailedItem] = useState(null);
+
+            const startGame = (mode) => {
+                setGameMode(mode);
+                const targetQuestions = mode === 'rookie' 
+                    ? SUBMISSIONS.filter(s => ROOKIE_IDS.includes(s.id))
+                    : SUBMISSIONS;
+                setShuffledQuestions(shuffleArray(targetQuestions));
+                setCurrentIndex(0); setScore(0); setCorrectCount(0); setTimeLeftMs(60000);
+                setHistory([]); setIsPaused(false); setSelectedLog(null); setShowMobileLog(false);
+                setFailedItem(null); setGameState('playing');
+            };
+
+            useEffect(() => {
+                let animationFrameId;
+                let lastTime = performance.now();
+                const tick = (currentTime) => {
+                    if (gameState !== 'playing' || isPaused) return;
+                    if (gameMode === 'veteran') {
+                        const deltaTime = currentTime - lastTime;
+                        lastTime = currentTime;
+                        setTimeLeftMs((prev) => Math.max(0, prev - deltaTime));
+                    }
+                    animationFrameId = requestAnimationFrame(tick);
+                };
+                if (gameState === 'playing' && !isPaused) {
+                    lastTime = performance.now();
+                    animationFrameId = requestAnimationFrame(tick);
+                }
+                return () => cancelAnimationFrame(animationFrameId);
+            }, [gameState, isPaused, gameMode]);
+
+            useEffect(() => {
+                if (timeLeftMs === 0 && gameState === 'playing' && gameMode === 'veteran') {
+                    setResultType('timeup'); setGameState('result');
+                }
+            }, [timeLeftMs, gameState, gameMode]);
+
+            const handleJudge = (judgeSafe) => {
+                if (isPaused) return; 
+                const current = shuffledQuestions[currentIndex % shuffledQuestions.length];
+                setHistory(prev => [current, ...prev]);
+                if (current.isSafe === judgeSafe) {
+                    setScore(s => s + 100);
+                    const newCount = correctCount + 1;
+                    setCorrectCount(newCount);
+                    setCurrentIndex(i => i + 1);
+                    if (gameMode === 'rookie' && newCount >= 30) {
+                        setResultType('cleared'); setGameState('result');
+                        localStorage.setItem('unlockedVeteran', 'true'); setUnlockedVeteran(true);
+                        return;
+                    }
+                    if ((currentIndex + 1) % shuffledQuestions.length === 0) {
+                        setShuffledQuestions(shuffleArray(shuffledQuestions));
+                    }
+                } else {
+                    setFailedItem(current); setResultType('failed'); setGameState('result');
+                }
+            };
+
+            const toggleMobileLog = (open) => {
+                setShowMobileLog(open);
+                setIsPaused(open);
+            };
+
+            const formatTime = (ms) => {
+                const totalMs = Math.max(0, ms);
+                const m = Math.floor(totalMs / 60000).toString();
+                const s = Math.floor((totalMs % 60000) / 1000).toString().padStart(2, '0');
+                const ms10 = Math.floor((totalMs % 1000) / 10).toString().padStart(2, '0');
+                return `${m}:${s}:${ms10}`;
+            };
+
+            return (
+                <div className="h-full w-full flex flex-col md:flex-row text-slate-200 overflow-hidden relative">
+                    {/* 左側のゲームメインエリア */}
+                    <div className="flex-1 flex flex-col p-4 md:p-8 border-r border-slate-700 bg-slate-900 relative overflow-hidden">
+                        
+                        {/* ヘッダーエリア */}
+                        <div className="flex justify-between items-start mb-4 z-20 h-16 md:h-20">
+                            {gameState === 'playing' ? (
+                                <span className="bg-red-600 text-sm md:text-xl px-3 py-1.5 font-black tracking-widest text-white shadow-md rounded-sm animate-in fade-in duration-300">
+                                    不適切な文章を見分けろ！
+                                </span>
+                            ) : <div/>}
+                            
+                            <div className="flex flex-col items-end shrink-0 ml-auto leading-tight">
+                                {gameState !== 'title' && (
+                                    gameMode === 'rookie' && gameState === 'playing' ? (
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-[10px] md:text-xs opacity-70 font-bold uppercase tracking-widest text-slate-400">業務ノルマ</span>
+                                            <span className="font-mono text-xl md:text-2xl font-bold text-slate-100">{correctCount}/30</span>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <span className="font-mono text-xl md:text-2xl font-bold text-slate-300">SCORE: {score}</span>
+                                            {gameState === 'playing' && gameMode === 'veteran' && (
+                                                <div className="bg-black border border-slate-400 px-3 py-1 rounded mt-1">
+                                                    <span className={`digital-font text-lg md:text-xl font-black ${timeLeftMs <= 10000 ? 'text-red-500 animate-pulse' : 'text-green-500'}`}>
+                                                        {formatTime(timeLeftMs)}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </>
+                                    )
+                                )}
+                            </div>
+                        </div>
+
+                        {/* タイトル画面 */}
+                        {gameState === 'title' && (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-4"><title>検閲の達人</title>
+                                <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter text-white uppercase shrink-text">
+                                    検閲の達人<br/><span className="text-red-500 italic text-2xl md:text-3xl">KENETSU NO TATSUJIN</span>
+                                </h1>
+                                <p className="text-sm md:text-base text-slate-400 mb-8 max-w-md leading-relaxed hide-on-short">
+                                    日々のビジネスメールや社内チャットに紛れ込む「悪質なネットミーム」を隔離し、会社の社会的信用を守ってください。
+                                </p>
+                                <div className="flex flex-col gap-4 w-full max-w-sm">
+                                    <button onClick={() => startGame('rookie')} className="bg-white text-slate-900 px-6 py-4 rounded-lg font-black text-lg active:scale-95 shadow-xl transition-all border-l-8 border-green-500 flex flex-col items-center justify-center">
+                                        <span>新人検閲官</span>
+                                    </button>
+                                    <button 
+                                        onClick={() => unlockedVeteran && startGame('veteran')} 
+                                        className={`px-6 py-4 rounded-lg font-black text-lg transition-all border-l-8 flex flex-col items-center justify-center ${unlockedVeteran ? 'bg-slate-800 text-white border-red-500 active:scale-95 shadow-xl hover:bg-slate-700' : 'bg-slate-900/50 text-slate-600 border-slate-700 cursor-not-allowed'}`}
+                                    >
+                                        <div className="flex items-center justify-center gap-2">
+                                            {!unlockedVeteran && <span>🔒</span>}
+                                            <span>ベテラン検閲官</span>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* プレイ画面 */}
+                        {gameState === 'playing' && (
+                            <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-8 w-full relative">
+                                <div className="w-full max-w-2xl relative">
+                                    
+                                    {/* 解説枠（高さ固定でグラグラ防止） */}
+                                    <div className="h-32 md:h-36 mb-4">
+                                        {history.length > 0 && (
+                                            <div className="w-full h-full bg-slate-50/95 border-2 border-sky-300 rounded-lg p-4 md:p-6 shadow-xl z-10 animate-in slide-in-from-bottom-4 duration-300 overflow-hidden flex flex-col justify-center">
+                                                <div className="text-[10px] md:text-sm font-black text-sky-500 mb-1 tracking-widest border-b border-sky-200 pb-1">直前の判定: {history[0].term}</div>
+                                                <div className="text-base md:text-lg font-bold text-sky-800 leading-tight whitespace-pre-wrap">{history[0].desc}</div>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    {/* 問題文枠（高さ固定でグラグラ防止、バッジはみ出し許可） */}
+                                    <div className="w-full h-40 md:h-48 relative z-20">
+                                        <div className="absolute -top-3 left-4 bg-blue-500 text-[10px] md:text-xs font-bold px-3 py-0.5 rounded text-white uppercase tracking-widest z-30 shadow-md">
+                                            {shuffledQuestions[currentIndex].type}
+                                        </div>
+                                        <div className="w-full h-full bg-slate-800 rounded-lg border-l-4 border-blue-500 shadow-2xl flex items-center justify-center p-6 md:p-8 overflow-hidden">
+                                            <div className="text-xl md:text-2xl font-bold leading-snug text-white text-center">
+                                                「{shuffledQuestions[currentIndex].text}」
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                {/* 判定ボタン */}
+                                <div className="flex gap-16 md:gap-32 mt-6 md:mt-2 pb-10 md:pb-0">
+                                    <div className="flex flex-col items-center gap-3 md:gap-4">
+                                        <button onClick={() => handleJudge(false)} className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-slate-800 border-4 border-red-500 flex items-center justify-center text-red-500 text-5xl active:bg-red-500 active:text-white transition-all shadow-xl font-black hover:bg-slate-700">✕</button>
+                                        <span className="text-base md:text-lg font-black text-red-500 tracking-widest">却下</span>
+                                    </div>
+                                    <div className="flex flex-col items-center gap-3 md:gap-4">
+                                        <button onClick={() => handleJudge(true)} className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-slate-800 border-4 border-blue-500 flex items-center justify-center text-blue-500 text-5xl active:bg-blue-500 active:text-white transition-all shadow-xl font-black hover:bg-slate-700">◯</button>
+                                        <span className="text-base md:text-lg font-black text-blue-500 tracking-widest">許可</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* リザルト画面 */}
+                        {gameState === 'result' && (
+                            <div className="flex-1 flex flex-col items-center justify-center text-center p-2 md:p-4 overflow-y-auto">
+                                {resultType === 'cleared' ? (
+                                    <>
+                                        <div className="text-6xl md:text-8xl mb-2 text-green-400 font-black uppercase tracking-widest drop-shadow-[0_0_10px_rgba(74,222,128,0.8)]">CLEAR!</div>
+                                        <p className="text-xl md:text-2xl text-white mb-2 font-black">新人研修を完了しました。</p>
+                                        <p className="text-base md:text-lg text-yellow-300 font-black mb-8 animate-pulse">🔒「ベテラン検閲官」モードが解放されました！</p>
+                                    </>
+                                ) : resultType === 'failed' ? (
+                                    <>
+                                        <div className="text-6xl md:text-8xl mb-2 text-red-600 font-black uppercase tracking-widest drop-shadow-[0_0_10px_rgba(220,38,38,0.8)]">FAILED</div>
+                                        <p className="text-lg md:text-xl text-slate-300 mb-2 font-black">
+                                            {failedItem?.isSafe ? '正常な業務連絡を遮断してしまいました。' : '汚染された通信を通過させてしまいました。'}
+                                        </p>
+                                        <p className="text-sm md:text-base text-slate-400 mb-8">
+                                            {failedItem?.isSafe ? '過剰な検閲により業務ラインが停止しました。即時解雇です。' : '社内ネットワークが深刻なミーム汚染を受けました。即時解雇です。'}
+                                        </p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <div className="text-6xl md:text-8xl mb-2 text-blue-400 font-black uppercase tracking-widest drop-shadow-[0_0_10px_rgba(96,165,250,0.8)]">TIME UP</div>
+                                        <p className="text-lg md:text-xl text-slate-300 mb-2 font-black">本日の検閲業務が終了しました。</p>
+                                        <p className="text-sm md:text-base text-slate-400 mb-8">コンプライアンスは無事に守られました。</p>
+                                    </>
+                                )}
+
+                                {resultType === 'failed' && failedItem && (
+                                    <div className="w-full max-w-xl bg-red-950/40 border border-red-500/50 p-6 rounded-lg mb-8 text-left">
+                                        <div className="text-xs md:text-sm font-black text-red-400 uppercase mb-2 tracking-tighter">
+                                            {failedItem.isSafe ? '誤って遮断した正常な通信：' : '見逃してしまった有害な通信：'}
+                                        </div>
+                                        <div className="text-base md:text-lg italic mb-4 text-white">「{failedItem.text}」</div>
+                                        <div className="bg-red-900/40 p-4 rounded border border-red-400/30">
+                                            <div className="text-sm md:text-base font-black text-red-300 mb-1">【{failedItem.term}】</div>
+                                            <div className="text-xs md:text-sm leading-relaxed text-red-100/80 whitespace-pre-wrap">{failedItem.desc}</div>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                {gameMode === 'veteran' && <div className="text-3xl md:text-4xl font-black mb-8 text-white">SCORE: {score}</div>}
+                                <button onClick={() => setGameState('title')} className="bg-white text-slate-900 px-12 py-4 rounded-full font-black text-xl active:scale-95 mb-4 shadow-2xl transition-all hover:bg-slate-200">タイトルへ</button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* 右側 / 下端：知識アーカイブ */}
+                    {gameState !== 'title' && (
+                        <div className={`${showMobileLog ? 'translate-y-0 h-1/2' : 'translate-y-[calc(100%-52px)] h-1/2'} md:translate-y-0 md:h-full fixed md:relative bottom-0 left-0 w-full md:w-96 bg-slate-950 border-t md:border-t-0 md:border-l border-slate-700 p-4 md:p-6 flex flex-col shadow-2xl z-40 log-panel-transition`}>
+                            <h3 
+                                onClick={() => { if(window.innerWidth < 768) toggleMobileLog(!showMobileLog); }}
+                                className="text-[10px] md:text-xs font-black text-slate-500 mb-4 border-b border-slate-800 pb-2 uppercase tracking-widest flex items-center justify-between cursor-pointer md:cursor-default h-6 shrink-0"
+                            >
+                                <span>Knowledge Archive</span>
+                                <span className="md:hidden text-xs bg-slate-800 px-3 py-0.5 rounded border border-slate-600 font-black text-white">
+                                    {showMobileLog ? '▼ 再開' : '▲ 展開'}
+                                </span>
+                            </h3>
+                            <div className={`flex-1 overflow-y-auto space-y-2 pb-10 md:pb-0 ${!showMobileLog && window.innerWidth < 768 ? 'hidden' : 'block'}`}>
+                                {history.length === 0 ? (
+                                    <div className="h-full flex items-center justify-center opacity-30 italic text-sm text-white">No history...</div>
+                                ) : (
+                                    history.map((item, idx) => (
+                                        <button key={idx} onClick={() => { setSelectedLog(item); setIsPaused(true); }} className="w-full text-left bg-slate-900/80 p-3 rounded border border-slate-800 hover:border-blue-500 hover:bg-slate-800 transition-all">
+                                            <div className={`text-xs font-black truncate mb-1 ${item.isSafe ? 'text-blue-400' : 'text-red-400'}`}>{item.term}</div>
+                                            <div className="text-[10px] text-slate-400 truncate opacity-70">{item.text}</div>
+                                        </button>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 詳細モーダル */}
+                    {selectedLog && (
+                        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm">
+                            <div className="bg-slate-800 border border-blue-500 rounded-lg max-w-md w-full p-6 md:p-8 flex flex-col max-h-[90dvh]">
+                                <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-3 shrink-0">
+                                    <h2 className="text-xl font-black text-white tracking-widest uppercase italic">Knowledge</h2>
+                                    <span className="bg-blue-600 text-xs px-3 py-1 rounded font-black text-white">PAUSED</span>
+                                </div>
+                                <div className="overflow-y-auto flex-1 mb-6">
+                                    <div className={`text-xl font-black mb-3 ${selectedLog.isSafe ? 'text-blue-400' : 'text-red-400'}`}>対象: {selectedLog.term}</div>
+                                    <div className="text-base text-slate-300 bg-slate-900 p-5 rounded-lg whitespace-pre-wrap leading-relaxed border border-slate-700 shadow-inner">
+                                        {selectedLog.desc}
+                                    </div>
+                                </div>
+                                <button onClick={() => { setSelectedLog(null); if(!showMobileLog) setIsPaused(false); }} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-black py-4 rounded-lg text-lg active:scale-95 transition-all shadow-xl">詳細を閉じる</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>

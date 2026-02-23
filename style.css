@@ -1,0 +1,7 @@
+#root { height: 100dvh; width: 100vw; overflow: hidden; background-color: #0f172a; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+* { -webkit-tap-highlight-color: transparent; }
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+.digital-font { font-family: 'Courier New', Courier, monospace; font-variant-numeric: tabular-nums; }
+@media (max-height: 500px) { .hide-on-short { display: none; } .shrink-text { font-size: 1rem !important; line-height: 1.2 !important; } }
+.log-panel-transition { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
