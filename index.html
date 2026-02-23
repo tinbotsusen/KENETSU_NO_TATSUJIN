@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>検閲の鉄人</title>
+    <title>検閲の達人</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Mochiy+Pop+P+One&display=swap" rel="stylesheet">
@@ -128,7 +128,7 @@
             { id: 93, type: "チャット", text: "そんなことして、大丈夫か？まずいですよ！", isSafe: false, term: "まずいですよ！", desc: "出典：淫夢。不穏な焦燥ミーム。" },
             { id: 94, type: "チャット", text: "明日の資料配布は、こ↑こ↓にお願いします。", isSafe: false, term: "こ↑こ↓", desc: "出典：淫夢。不自然な記号指定。" },
             { id: 95, type: "チャット", text: "今日の懇親会、参加人数は33-4名になる見込みです。", isSafe: false, term: "33-4", desc: "なんJ。敗北スコアの揶揄。" },
-            { id: 96, type: "チャット", text: "いいよ、来いよ。11時45分にお待ちしています。", isSafe: false, term: "114514（隠語）", desc: "淫夢。悪質なミーム誘導。" },
+            { id: 96, type: "チャット", text: "いいよ、来いよ。11時45分にお待ちしています。", isSafe: false, term: "いいよ、来いよ", desc: "出典：淫夢。不適切な時間指定偽装。" },
             { id: 97, type: "チャット", text: "部長、やりますね。はっきりわかんだね。", isSafe: false, term: "はっきりわかんだね", desc: "出典：淫夢。確信を得た際の不適切な句。" },
             { id: 98, type: "チャット", text: "案件成功おめでとう！そうだよ（便乗）", isSafe: false, term: "（便乗）", desc: "出典：淫夢。嘲笑的同意。" },
             { id: 99, type: "チャット", text: "明日のアップデート、で、出ますよ。", isSafe: false, term: "で、出ますよ", desc: "出典：淫夢。悪質な汚染行為。" },
@@ -141,7 +141,6 @@
             { id: 106, type: "商品企画", text: "新商品の名称として『最強とんがりコーン』はいかがでしょうか。", isSafe: false, term: "最強とんがりコーン", desc: "出典：レスリング。空耳由来の違反。" }
         ];
 
-        // 厳選された新人モード用ID（33問固定）
         const ROOKIE_IDS = [
             1, 2, 3, 4, 5, 7, 8, 10, 13, 15,
             20, 21, 27, 28,
@@ -173,6 +172,15 @@
             const [showMobileLog, setShowMobileLog] = useState(false);
             const [failedItem, setFailedItem] = useState(null);
             const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+            
+            // isPC の定義を追加
+            const [isPC, setIsPC] = useState(window.innerWidth >= 768);
+
+            useEffect(() => {
+                const handleResize = () => setIsPC(window.innerWidth >= 768);
+                window.addEventListener('resize', handleResize);
+                return () => window.removeEventListener('resize', handleResize);
+            }, []);
 
             const startGame = (mode) => {
                 setGameMode(mode);
@@ -284,7 +292,6 @@
 
             return (
                 <div className="h-full w-full flex flex-col md:flex-row text-slate-200 overflow-hidden relative">
-                    {/* 左側のゲームメインエリア */}
                     <div className="flex-1 flex flex-col p-4 md:p-8 border-r border-slate-700 bg-slate-900 relative overflow-hidden">
                         
                         {/* ヘッダーエリア */}
@@ -321,40 +328,53 @@
                         {/* タイトル画面 */}
                         {gameState === 'title' && (
                             <div className="flex-1 flex flex-col items-center justify-center text-center p-4">
-                                <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter text-white uppercase shrink-text">
-                                    検閲の達人<br/><span className="text-red-500 italic text-2xl md:text-3xl">KENETSU NO TATSUJIN</span>
-                                </h1>
-                                <p className="text-sm md:text-base text-slate-400 mb-8 max-w-md leading-relaxed hide-on-short">
-                                    日々のビジネスメールや社内チャットに紛れ込む「悪質なネットミーム」を隔離し、会社の社会的信用を守ってください。
-                                </p>
-                                <div className="flex flex-col gap-4 w-full max-w-sm">
-                                    <button onClick={() => startGame('rookie')} className="bg-white text-slate-900 px-6 py-4 rounded-lg font-black text-lg active:scale-95 shadow-xl transition-all border-l-8 border-green-500 flex flex-col items-center justify-center">
-                                        <span>新人検閲官</span>
-                                    </button>
-                                    <button 
-                                        onClick={() => unlockedVeteran && startGame('veteran')} 
-                                        className={`px-6 py-4 rounded-lg font-black text-lg transition-all border-l-8 flex flex-col items-center justify-center ${unlockedVeteran ? 'bg-slate-800 text-white border-red-500 active:scale-95 shadow-xl hover:bg-slate-700' : 'bg-slate-900/50 text-slate-600 border-slate-700 cursor-not-allowed'}`}
-                                    >
-                                        <div className="flex items-center justify-center gap-2">
-                                            {!unlockedVeteran && <span>🔒</span>}
-                                            <span>ベテラン検閲官</span>
-                                        </div>
-                                    </button>
                                 
-                                    {/* 訂正箇所：シェアボタンを中央に配置 */}
-    <div className="flex justify-center w-full mt-2">
-        <button 
-            onClick={() => setIsShareModalOpen(true)} 
-            className="w-[60px] h-[60px] shrink-0 bg-blue-600/90 text-white rounded-lg flex items-center justify-center active:scale-95 shadow-lg border-2 border-blue-400 hover:bg-blue-500 transition-all"
-        >
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
-                <polyline points="16 6 12 2 8 6"/>
-                <line x1="12" y1="2" x2="12" y2="15"/>
-            </svg>
-        </button>
-    </div>
-</div>
+                                {/* 背景画像を挿入する場合のコード */}
+                                <div className="absolute inset-0 z-0 opacity-40">
+                                    <img 
+                                        src={isPC ? "title-bg.jpg" : "title-bg-mobile.jpg"} 
+                                        className="w-full h-full object-cover" 
+                                        alt=""
+                                        onError={(e) => e.target.style.display = 'none'}
+                                    />
+                                </div>
+
+                                <div className="relative z-10 flex flex-col items-center">
+                                    <h1 className="text-4xl md:text-5xl font-black mb-4 tracking-tighter text-white uppercase shrink-text">
+                                        検閲の達人<br/><span className="text-red-500 italic text-2xl md:text-3xl">KENETSU NO TATSUJIN</span>
+                                    </h1>
+                                    <p className="text-sm md:text-base text-slate-400 mb-8 max-w-md leading-relaxed hide-on-short">
+                                        日々のビジネスメールや社内チャットに紛れ込む「悪質なネットミーム」を隔離し、会社の社会的信用を守ってください。
+                                    </p>
+                                    <div className="flex flex-col gap-4 w-full max-w-sm">
+                                        <button onClick={() => startGame('rookie')} className="bg-white text-slate-900 px-6 py-4 rounded-lg font-black text-lg active:scale-95 shadow-xl transition-all border-l-8 border-green-500 flex flex-col items-center justify-center">
+                                            <span>新人検閲官</span>
+                                        </button>
+                                        <button 
+                                            onClick={() => unlockedVeteran && startGame('veteran')} 
+                                            className={`py-4 rounded-lg font-black text-lg transition-all border-l-8 flex flex-col items-center justify-center ${unlockedVeteran ? 'bg-slate-800 text-white border-red-500 active:scale-95 shadow-xl hover:bg-slate-700' : 'bg-slate-900/50 text-slate-600 border-slate-700 cursor-not-allowed'}`}
+                                        >
+                                            <div className="flex items-center justify-center gap-2">
+                                                {!unlockedVeteran && <span>🔒</span>}
+                                                <span>ベテラン検閲官</span>
+                                            </div>
+                                        </button>
+                                    
+                                        {/* 中央寄せのシェアボタン */}
+                                        <div className="flex justify-center w-full mt-2">
+                                            <button 
+                                                onClick={() => setIsShareModalOpen(true)} 
+                                                className="w-[60px] h-[60px] shrink-0 bg-blue-600/90 text-white rounded-lg flex items-center justify-center active:scale-95 shadow-lg border-2 border-blue-400 hover:bg-blue-500 transition-all"
+                                            >
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                                                    <polyline points="16 6 12 2 8 6"/>
+                                                    <line x1="12" y1="2" x2="12" y2="15"/>
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
 
@@ -362,8 +382,6 @@
                         {gameState === 'playing' && (
                             <div className="flex-1 flex flex-col items-center justify-center gap-4 md:gap-8 w-full relative">
                                 <div className="w-full max-w-2xl relative">
-                                    
-                                    {/* 解説枠 */}
                                     <div className="h-32 md:h-36 mb-4">
                                         {history.length > 0 && (
                                             <div className="w-full h-full bg-slate-50/95 border-2 border-sky-300 rounded-lg p-4 md:p-6 shadow-xl z-10 animate-in slide-in-from-bottom-4 duration-300 overflow-hidden flex flex-col justify-center">
@@ -372,8 +390,6 @@
                                             </div>
                                         )}
                                     </div>
-                                    
-                                    {/* 問題文枠 */}
                                     <div className="w-full h-40 md:h-48 relative z-20">
                                         <div className="absolute -top-3 left-4 bg-blue-500 text-[10px] md:text-xs font-bold px-3 py-0.5 rounded text-white uppercase tracking-widest z-30 shadow-md">
                                             {shuffledQuestions[currentIndex].type}
@@ -385,8 +401,6 @@
                                         </div>
                                     </div>
                                 </div>
-                                
-                                {/* 判定ボタン */}
                                 <div className="flex gap-16 md:gap-32 mt-6 md:mt-2 pb-10 md:pb-0">
                                     <div className="flex flex-col items-center gap-3 md:gap-4">
                                         <button onClick={() => handleJudge(false)} className="w-24 h-24 md:w-32 md:h-32 rounded-full bg-slate-800 border-4 border-red-500 flex items-center justify-center text-red-500 text-5xl active:bg-red-500 active:text-white transition-all shadow-xl font-black hover:bg-slate-700">✕</button>
@@ -442,21 +456,36 @@
                                 
                                 {gameMode === 'veteran' && <div className="text-3xl md:text-4xl font-black mb-8 text-white">SCORE: {score}</div>}
                                 
-                                <div className="flex flex-col md:flex-row gap-4 w-full max-w-md px-4 mt-4">
-                                    <button 
-                                        onClick={() => setIsShareModalOpen(true)} 
-                                        className="flex-1 bg-blue-500 text-white py-4 rounded-full font-black text-lg active:scale-95 shadow-xl border-b-4 border-blue-700 transition-all hover:bg-blue-400"
-                                    >
-                                        結果をシェア
-                                    </button>
-                                    <button 
-                                        onClick={() => setGameState('title')} 
-                                        className="flex-1 bg-white text-slate-900 py-4 rounded-full font-black text-lg active:scale-95 shadow-xl border-b-4 border-slate-300 transition-all hover:bg-slate-200"
-                                    >
-                                        タイトルへ
-                                    </button>
+                                <div className="flex flex-col gap-4 w-full max-w-md px-4 mt-4">
+                                    {/* リトライボタン：青から赤（bg-red-600）に変更 */}
+<button 
+    onClick={() => startGame(gameMode)} 
+    className="w-full bg-red-600 text-white py-4 rounded-full font-black text-xl active:scale-95 shadow-xl border-b-4 border-red-800 transition-all hover:bg-red-500"
+>
+    リトライ
+</button>
+                                    
+                                    <div className="flex gap-3 w-full">
+                                        <button 
+                                            onClick={() => setGameState('title')} 
+                                            className="flex-1 bg-white text-slate-900 py-4 rounded-full font-black text-lg active:scale-95 shadow-xl border-b-4 border-slate-300 transition-all hover:bg-slate-200"
+                                        >
+                                            タイトルへ
+                                        </button>
+
+                                        <button 
+                                            onClick={() => setIsShareModalOpen(true)} 
+                                            className="w-[68px] h-[68px] shrink-0 bg-slate-700 text-white rounded-2xl flex items-center justify-center active:scale-95 shadow-xl border-b-4 border-slate-900 hover:bg-slate-600 transition-all"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+                                                <polyline points="16 6 12 2 8 6"/>
+                                                <line x1="12" y1="2" x2="12" y2="15"/>
+                                            </svg>
+                                        </button>
+                                    </div>
                                 </div>
-                            </div>
+                            </div> // ← 閉じられていなかった div
                         )}
                     </div>
 
